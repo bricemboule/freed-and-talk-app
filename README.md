@@ -1,13 +1,13 @@
-# FREE & TALK — Authentification, profils et rendez-vous
+# FREE & TALK — API d'authentification, profils et services
 
-API FastAPI des modules 1 à 3 : **13 endpoints d'authentification, 23 endpoints de profils et de vérification professionnelle, et 27 endpoints de planning et de consultation**, SQLAlchemy 2, MySQL/MariaDB, Alembic, JWT, OTP email et tests automatisés. Les identifiants restent des UUID comme au module 1.
+API FastAPI construite avec SQLAlchemy 2, MySQL/MariaDB, Alembic, JWT et OTP email. Elle comprend l'authentification, les profils et vérifications professionnelles, les disponibilités et rendez-vous, la messagerie, les notifications, les articles, les ressources, les avis, la recherche et l'administration. Les identifiants sont des UUID.
 
 ## Prérequis
 
 - Python 3.12+
 - MySQL 8+ avec le moteur InnoDB ; SQLite reste disponible pour les tests locaux
-- SMTP pour envoyer de vrais emails ; boîte locale disponible sans SMTP
-- Redis (requis en production pour le rate limiting distribué)
+- Aucun SMTP nécessaire en développement avec `EMAIL_BACKEND=file` ; SMTP configurable pour l'envoi réel
+- Redis facultatif en développement et requis en production pour le rate limiting distribué
 
 ## Installation locale
 
@@ -88,49 +88,47 @@ Le projet fournit une API. Swagger permet d'exécuter les requêtes ; aucun écr
 
 ## Routes exposées
 
-| Méthode | Route | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Inscription patient |
-| POST | `/api/auth/verify-email` | Vérification email |
-| POST | `/api/auth/resend-email-code` | Renvoi email |
-| POST | `/api/auth/login` | Mot de passe puis OTP |
-| POST | `/api/auth/verify-login-otp` | Vérification OTP / tokens |
-| POST | `/api/auth/resend-login-otp` | Renvoi OTP connexion |
-| POST | `/api/auth/refresh` | Rotation des tokens |
-| POST | `/api/auth/logout` | Révocation de session |
-| GET | `/api/auth/me` | Identité authentifiée |
-| POST | `/api/auth/forgot-password` | Demande de récupération |
-| POST | `/api/auth/verify-reset-code` | Vérification du code reset |
-| POST | `/api/auth/reset-password` | Réinitialisation |
-| PUT | `/api/users/me/password` | Changement connecté |
+| Méthode | Route                         | Description                |
+| ------- | ----------------------------- | -------------------------- |
+| POST    | `/api/auth/register`          | Inscription patient        |
+| POST    | `/api/auth/verify-email`      | Vérification email         |
+| POST    | `/api/auth/resend-email-code` | Renvoi email               |
+| POST    | `/api/auth/login`             | Mot de passe puis OTP      |
+| POST    | `/api/auth/verify-login-otp`  | Vérification OTP / tokens  |
+| POST    | `/api/auth/resend-login-otp`  | Renvoi OTP connexion       |
+| POST    | `/api/auth/refresh`           | Rotation des tokens        |
+| POST    | `/api/auth/logout`            | Révocation de session      |
+| GET     | `/api/auth/me`                | Identité authentifiée      |
+| POST    | `/api/auth/forgot-password`   | Demande de récupération    |
+| POST    | `/api/auth/verify-reset-code` | Vérification du code reset |
+| POST    | `/api/auth/reset-password`    | Réinitialisation           |
+| PUT     | `/api/users/me/password`      | Changement connecté        |
 
 ## Module 2 : profils et vérification professionnelle
 
-Après mise à jour du code, appliquer `alembic upgrade head`, puis relancer `uvicorn app.main:app --reload`. La migration ajoute les champs de profil aux utilisateurs existants et trois tables professionnelles ; elle conserve les comptes du module 1. `python main.py` applique aussi les migrations au démarrage.
-
 Dans Swagger, terminer la connexion OTP, cliquer sur **Authorize** et coller l'`access_token`. La validation email donne accès au compte ; elle ne valide pas les qualifications professionnelles.
 
-| Méthode | Route | Accès |
-|---|---|---|
-| GET, PUT | `/api/users/me` | Utilisateur connecté, son propre profil |
-| POST, DELETE | `/api/users/me/avatar` | Utilisateur connecté, son propre avatar |
-| POST | `/api/auth/register/psychologist` | Public, inscription avec confirmation du mot de passe |
-| GET, PUT | `/api/psychologists/me` | Psychologue connecté |
-| POST, GET | `/api/psychologists/me/documents` | Psychologue connecté, ses propres documents |
-| DELETE | `/api/psychologists/me/documents/{document_id}` | Propriétaire, si document non verrouillé |
-| POST | `/api/psychologists/me/submit-verification` | Psychologue connecté |
-| GET | `/api/psychologists/me/verification-status` | Psychologue connecté |
-| GET | `/api/admin/psychologists/verifications` | Administrateur |
-| GET | `/api/admin/psychologists/{psychologist_id}/verification` | Administrateur |
-| GET | `/api/admin/psychologists/{psychologist_id}/documents/{document_id}` | Administrateur, téléchargement privé journalisé |
-| POST | `/api/admin/psychologists/{psychologist_id}/documents/{document_id}/approve` | Administrateur |
-| POST | `/api/admin/psychologists/{psychologist_id}/documents/{document_id}/reject` | Administrateur, motif obligatoire |
-| POST | `/api/admin/psychologists/{psychologist_id}/approve` | Administrateur |
-| POST | `/api/admin/psychologists/{psychologist_id}/reject` | Administrateur, motif obligatoire |
-| POST | `/api/admin/psychologists/{psychologist_id}/suspend` | Administrateur, motif obligatoire |
-| POST | `/api/admin/psychologists/{psychologist_id}/reactivate` | Administrateur |
-| GET | `/api/psychologists` | Public, annuaire filtré et paginé |
-| GET | `/api/psychologists/{psychologist_id}` | Public, uniquement les profils publiables |
+| Méthode      | Route                                                                        | Accès                                                 |
+| ------------ | ---------------------------------------------------------------------------- | ----------------------------------------------------- |
+| GET, PUT     | `/api/users/me`                                                              | Utilisateur connecté, son propre profil               |
+| POST, DELETE | `/api/users/me/avatar`                                                       | Utilisateur connecté, son propre avatar               |
+| POST         | `/api/auth/register/psychologist`                                            | Public, inscription avec confirmation du mot de passe |
+| GET, PUT     | `/api/psychologists/me`                                                      | Psychologue connecté                                  |
+| POST, GET    | `/api/psychologists/me/documents`                                            | Psychologue connecté, ses propres documents           |
+| DELETE       | `/api/psychologists/me/documents/{document_id}`                              | Propriétaire, si document non verrouillé              |
+| POST         | `/api/psychologists/me/submit-verification`                                  | Psychologue connecté                                  |
+| GET          | `/api/psychologists/me/verification-status`                                  | Psychologue connecté                                  |
+| GET          | `/api/admin/psychologists/verifications`                                     | Administrateur                                        |
+| GET          | `/api/admin/psychologists/{psychologist_id}/verification`                    | Administrateur                                        |
+| GET          | `/api/admin/psychologists/{psychologist_id}/documents/{document_id}`         | Administrateur, téléchargement privé journalisé       |
+| POST         | `/api/admin/psychologists/{psychologist_id}/documents/{document_id}/approve` | Administrateur                                        |
+| POST         | `/api/admin/psychologists/{psychologist_id}/documents/{document_id}/reject`  | Administrateur, motif obligatoire                     |
+| POST         | `/api/admin/psychologists/{psychologist_id}/approve`                         | Administrateur                                        |
+| POST         | `/api/admin/psychologists/{psychologist_id}/reject`                          | Administrateur, motif obligatoire                     |
+| POST         | `/api/admin/psychologists/{psychologist_id}/suspend`                         | Administrateur, motif obligatoire                     |
+| POST         | `/api/admin/psychologists/{psychologist_id}/reactivate`                      | Administrateur                                        |
+| GET          | `/api/psychologists`                                                         | Public, annuaire filtré et paginé                     |
+| GET          | `/api/psychologists/{psychologist_id}`                                       | Public, uniquement les profils publiables             |
 
 ### Tester le parcours psychologue
 
@@ -141,7 +139,7 @@ Dans Swagger, terminer la connexion OTP, cliquer sur **Authorize** et coller l'`
 5. Avec un autre compte administrateur, consulter la file, télécharger les documents et approuver ou rejeter chacun d'eux. La première décision sur un document passe le dossier en `under_review`.
 6. Approuver le profil après validation de ses pièces obligatoires. Il devient visible dans l'annuaire.
 
-Pour créer le premier administrateur depuis un terminal de confiance :
+Pour créer le premier administrateur depuis un terminal:
 
 ```bash
 python -m app.cli.create_admin --email admin@votre-domaine.com --fullname "Administrateur"
@@ -162,64 +160,49 @@ Les changements de titre, spécialité, expérience ou numéro d'inscription apr
 L'annuaire exige le statut `approved`, un compte et un rôle actifs, et un email vérifié. Il ne retourne ni coordonnées privées ni justificatifs ni motifs administratifs. Les services du module 3 recontrôlent ces conditions avant réservation et confirmation, avec des lectures verrouillées.
 
 Filtres publics : `country`, `city`, `specialty`, `language`, `consultation_mode`, `page`, `page_size` (1 à 100), `sort` (`name`, `experience`, `newest`). Filtres administratifs : `status`, `country`, `city`, `submitted_from`, `submitted_to`, `page`, `page_size`. Sans statut, la file administrative montre les dossiers soumis ou en cours d'examen.
-
-### Stockage des fichiers
-
-```dotenv
-MEDIA_DIRECTORY=.local/media
-PRIVATE_DOCUMENTS_DIRECTORY=.local/private/documents
-AVATAR_MAX_BYTES=5242880
-DOCUMENT_MAX_BYTES=5242880
-REQUIRED_PROFESSIONAL_DOCUMENTS=identity_document,diploma
-```
-
-Les avatars JPEG/PNG/WebP sont décodés et réencodés en WebP sans métadonnées, avec une dimension maximale de 1024 pixels. Ils sont servis via `/media/avatars/{nom_aleatoire}`. Les documents acceptent les PDF valides non chiffrés et les images JPEG/PNG décodables. Le MIME déclaré et le nom fourni par le client ne servent pas à déterminer le type réel. Les noms de stockage sont aléatoires ; les images sont normalisées et les documents PDF sont servis en pièces jointes aux seuls administrateurs.
-
-Les justificatifs ne sont jamais exposés via une route statique. Ne pas publier le répertoire privé dans un reverse proxy ; prévoir un volume persistant et des sauvegardes de la base **et** des fichiers. Cette implémentation utilise le disque local, pas un stockage objet, et n'intègre pas d'antivirus.
+`
 
 ## Module 3 : disponibilités, rendez-vous et consultations
 
-Appliquer `alembic upgrade head` après mise à jour du code. La migration `2e3b635c9ee6` ajoute les horaires, indisponibilités, rendez-vous, historiques, consultations, réservations et notifications. La migration additive `8ab7130c5f22` ajoute le type et les routes REST des consultations sans modifier les comptes ni les dossiers professionnels.
+La gestion des disponibilités, la réservation, la confirmation, le report et l'annulation des rendez-vous sont dans le périmètre. Le mode présentiel fonctionne sans fournisseur vidéo. Les parcours de consultation en ligne et l'accès Jitsi sont différés : ne pas les considérer comme activés tant qu'un serveur Jitsi compatible n'est pas configuré. Les routes correspondantes restent présentes dans l'API.
 
 ### Routes du module 3
 
-| Méthode | Route | Accès |
-|---|---|---|
-| GET, POST | `/api/psychologists/me/availability` | Psychologue, ses horaires |
-| PUT, DELETE | `/api/psychologists/me/availability/{availability_id}` | Propriétaire |
-| GET, POST | `/api/psychologists/me/unavailability` | Psychologue, ses exceptions |
-| PUT, DELETE | `/api/psychologists/me/unavailability/{unavailability_id}` | Propriétaire |
-| GET | `/api/psychologists/{psychologist_id}/available-slots` | Public, professionnel approuvé et actif |
-| GET | `/api/psychologists/{psychologist_id}/availability` | Public, horaires hebdomadaires actifs, sans adresse exacte |
-| POST | `/api/appointments` | Patient connecté |
-| GET | `/api/appointments` et `/api/appointments/me` | Patient, ses rendez-vous |
-| GET | `/api/appointments/{appointment_id}` | Participants ou administrateur |
-| PUT | `/api/appointments/{appointment_id}/reschedule` | Patient concerné |
-| PATCH | `/api/appointments/{appointment_id}` | Alias de replanification; même validation et règles de conflit |
-| POST | `/api/appointments/{appointment_id}/cancel` | Patient concerné |
-| GET | `/api/psychologists/me/appointments` | Psychologue, ses rendez-vous |
-| POST | `/api/psychologists/me/appointments/{appointment_id}/accept` | Psychologue concerné |
-| POST | `/api/appointments/{appointment_id}/accept` | Alias, psychologue concerné |
-| POST | `/api/psychologists/me/appointments/{appointment_id}/reject` | Psychologue concerné, motif requis |
-| POST | `/api/appointments/{appointment_id}/reject` | Alias, psychologue concerné |
-| POST | `/api/appointments/{appointment_id}/complete` | Alias, psychologue concerné |
-| POST | `/api/psychologists/me/appointments/{appointment_id}/complete` | Psychologue concerné |
-| POST | `/api/psychologists/me/appointments/{appointment_id}/cancel` | Psychologue concerné, motif requis |
-| GET | `/api/appointments/{appointment_id}/consultation` | Participants ou administrateur, métadonnées |
-| POST | `/api/consultations` | Participant, démarrer une consultation confirmée avec `appointment_id` et `consultation_type` |
-| GET | `/api/consultations` | Patient ou psychologue, ses consultations |
-| GET | `/api/consultations/{consultation_id}` | Participant du rendez-vous |
-| POST | `/api/appointments/{appointment_id}/consultation/start` | Participants uniquement |
-| POST | `/api/appointments/{appointment_id}/consultation/end` | Participants uniquement |
-| GET | `/api/appointments/{appointment_id}/consultation/access` | Participants uniquement, fenêtre d'accès |
-| GET | `/api/admin/appointments` | Administrateur |
-| GET | `/api/admin/appointments/{appointment_id}` | Administrateur, métadonnées et historique |
-| POST | `/api/admin/appointments/{appointment_id}/cancel` | Administrateur, motif requis |
-| GET | `/api/admin/consultations` | Administrateur, métadonnées uniquement |
+| Méthode     | Route                                                          | Accès                                                             |
+| ----------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| GET, POST   | `/api/psychologists/me/availability`                           | Psychologue, ses horaires                                         |
+| PUT, DELETE | `/api/psychologists/me/availability/{availability_id}`         | Propriétaire                                                      |
+| GET, POST   | `/api/psychologists/me/unavailability`                         | Psychologue, ses exceptions                                       |
+| PUT, DELETE | `/api/psychologists/me/unavailability/{unavailability_id}`     | Propriétaire                                                      |
+| GET         | `/api/psychologists/{psychologist_id}/available-slots`         | Public, professionnel approuvé et actif                           |
+| GET         | `/api/psychologists/{psychologist_id}/availability`            | Public, horaires hebdomadaires actifs, sans adresse exacte        |
+| POST        | `/api/appointments`                                            | Patient connecté                                                  |
+| GET         | `/api/appointments` et `/api/appointments/me`                  | Patient, ses rendez-vous                                          |
+| GET         | `/api/appointments/{appointment_id}`                           | Participants ou administrateur                                    |
+| PUT         | `/api/appointments/{appointment_id}/reschedule`                | Patient concerné                                                  |
+| PATCH       | `/api/appointments/{appointment_id}`                           | Alias de replanification; même validation et règles de conflit    |
+| POST        | `/api/appointments/{appointment_id}/cancel`                    | Patient concerné                                                  |
+| GET         | `/api/psychologists/me/appointments`                           | Psychologue, ses rendez-vous                                      |
+| POST        | `/api/psychologists/me/appointments/{appointment_id}/accept`   | Psychologue concerné                                              |
+| POST        | `/api/appointments/{appointment_id}/accept`                    | Alias, psychologue concerné                                       |
+| POST        | `/api/psychologists/me/appointments/{appointment_id}/reject`   | Psychologue concerné, motif requis                                |
+| POST        | `/api/appointments/{appointment_id}/reject`                    | Alias, psychologue concerné                                       |
+| POST        | `/api/appointments/{appointment_id}/complete`                  | Alias, psychologue concerné                                       |
+| POST        | `/api/psychologists/me/appointments/{appointment_id}/complete` | Psychologue concerné                                              |
+| POST        | `/api/psychologists/me/appointments/{appointment_id}/cancel`   | Psychologue concerné, motif requis                                |
+| GET         | `/api/appointments/{appointment_id}/consultation`              | Participants ou administrateur, métadonnées                       |
+| POST        | `/api/consultations`                                           | Participant, route présente ; usage consultation en ligne différé |
+| GET         | `/api/consultations`                                           | Patient ou psychologue ; route présente, module différé           |
+| GET         | `/api/consultations/{consultation_id}`                         | Participant ; route présente, module différé                      |
+| POST        | `/api/appointments/{appointment_id}/consultation/start`        | Participants ; consultation en ligne différée                     |
+| POST        | `/api/appointments/{appointment_id}/consultation/end`          | Participants ; consultation en ligne différée                     |
+| GET         | `/api/appointments/{appointment_id}/consultation/access`       | Participants ; accès Jitsi différé                                |
+| GET         | `/api/admin/appointments`                                      | Administrateur                                                    |
+| GET         | `/api/admin/appointments/{appointment_id}`                     | Administrateur, métadonnées et historique                         |
+| POST        | `/api/admin/appointments/{appointment_id}/cancel`              | Administrateur, motif requis                                      |
+| GET         | `/api/admin/consultations`                                     | Administrateur, métadonnées uniquement                            |
 
-Les types de consultation sont `video`, `audio`, `phone` et `in_person`. Les consultations restent liées à un rendez-vous confirmé et les nouvelles routes REST sont des alias de cette ressource. Les types `audio` et `phone` utilisent la salle de visioconférence configurée; ils ne fournissent pas une intégration téléphonique RTC autonome.
-
-La date de naissance est facultative à l'inscription d'un psychologue et dans le profil privé. Les dates futures sont refusées; la donnée n'est jamais incluse dans l'annuaire public. La migration `b1a77d5c30e4` ajoute le champ nullable sans altérer les comptes existants.
+Les modes enregistrés sont `video`, `audio`, `phone` et `in_person`. Les parcours `video`, `audio` et `phone` sont différés avec l'intégration Jitsi. Le mode `in_person` s'utilise dans le parcours de rendez-vous sans plateforme de visioconférence.
 
 ### Horaires et fuseaux
 
@@ -253,17 +236,6 @@ Exemple de disponibilité :
 
 Pour le présentiel, choisir `in_person` et renseigner `location` (cabinet ou lieu professionnel). Le lieu n'apparaît pas dans les créneaux publics ; il est communiqué au patient après confirmation du rendez-vous. Le mode doit aussi être autorisé dans le profil professionnel.
 
-### Tester une réservation
-
-1. Avec un psychologue approuvé, créer une disponibilité via `/api/psychologists/me/availability`.
-2. Consulter `/api/psychologists/{id}/available-slots?date=YYYY-MM-DD&consultation_mode=online&duration=45` pour une date future correspondant à son horaire.
-3. Se connecter avec un patient, puis envoyer à `POST /api/appointments` le `psychologist_id`, le `start_datetime` copié du créneau et le `consultation_mode`. `duration` est facultatif (45 minutes par défaut), `reason` et `notes` sont facultatifs et privés.
-4. Le rendez-vous devient `pending` et bloque immédiatement le créneau. Sa consultation publique ne réservait rien ; le backend refait tous les contrôles dans la transaction de création.
-5. Avec le psychologue concerné, appeler `/api/psychologists/me/appointments/{id}/accept`. Le rendez-vous devient `confirmed` et sa consultation est créée.
-6. Dans la fenêtre autorisée, les participants peuvent démarrer puis terminer la consultation. Le psychologue peut aussi utiliser `/complete` pour une consultation en cours, ou une consultation confirmée dont l'heure de fin planifiée est passée.
-
-Le statut professionnel, l'email vérifié, le compte et le rôle actifs sont contrôlés avant réservation, confirmation, démarrage et délivrance de l'accès vidéo. Les créneaux passés, bloqués, hors grille, hors horizon et les chevauchements du patient ou du psychologue sont refusés.
-
 ### Reports, annulations et conflits
 
 Un report depuis `pending` ou `confirmed` passe à `reschedule_requested` et nécessite une nouvelle confirmation. Le nouveau créneau est réservé et l'ancien libéré dans la même transaction ; l'ancien horaire reste dans l'historique. Une tentative vers un créneau occupé conserve intégralement le rendez-vous d'origine. Une consultation précédente est invalidée, puis sa salle est renouvelée à la nouvelle confirmation. Le refus d'un report ferme la demande et libère son créneau ; il ne restaure pas automatiquement l'ancien horaire.
@@ -276,87 +248,11 @@ La réservation verrouille le patient puis le profil professionnel et contrôle 
 
 Les listes patient/psychologue acceptent `status`, `date_from`, `date_to`, `page`, `page_size`. La liste administrative des rendez-vous ajoute `patient_id`, `psychologist_id`, `consultation_mode`. Celle des consultations accepte `status`, les identifiants et les dates. Les dates de filtre sont des instants ISO 8601, avec bornes inclusives. `page_size` est limité à 100. Les créations et reports utilisent aussi le rate limiting Redis du projet lorsqu'il est configuré.
 
-### Visioconférence Jitsi protégée par JWT
+### Visioconférence
 
-Le serveur Jitsi doit être déployé et configuré séparément avec authentification JWT **obligatoire**, vérification de la salle et sans accès anonyme aux salles. Une simple URL publique `meet.jit.si` ne suffit pas à valider les jetons de cette application. Consulter la [configuration officielle Jitsi Docker/JWT](https://github.com/jitsi/handbook/blob/master/docs/devops-guide/docker.md#authentication-using-jwt-tokens), notamment `ENABLE_AUTH`, `AUTH_TYPE`, `JWT_APP_ID`, `JWT_APP_SECRET` et `JWT_ALLOW_EMPTY`.
-
-Dans `.env` de l'API :
-
-```dotenv
-JITSI_BASE_URL=https://video.votre-domaine.com
-JITSI_APP_ID=free-and-talk
-JITSI_JWT_SECRET=un-secret-distinct-et-aleatoire-d-au-moins-32-caracteres
-JITSI_JWT_SUBJECT=meet.jitsi
-JITSI_JWT_AUDIENCE=free-and-talk
-```
-
-L'identifiant, le secret, le domaine XMPP (`sub`) et l'audience doivent correspondre au serveur Jitsi. Les jetons sont signés en HS256, liés à une seule salle aléatoire et à l'identité du participant ; leur durée est de 5 minutes par défaut, sans dépasser la fin de la fenêtre d'accès. L'accès API commence 15 minutes avant le rendez-vous et cesse 15 minutes après sa fin prévue, ou dès sa clôture/annulation.
-
-L'endpoint `/consultation/access` retourne `meeting_url` et `access_token` séparément, avec `Cache-Control: private, no-store`. Transmettre le jeton au client Jitsi (paramètre `jwt` de son intégration), sans le journaliser. Les autres routes, y compris administratives, ne retournent ni salle, ni URL privée, ni jeton. L'API ne donne pas aux administrateurs le droit de rejoindre une consultation.
-
-Sans configuration Jitsi complète, les rendez-vous peuvent être organisés mais `/consultation/access` retourne **503 `MEETING_PROVIDER_NOT_CONFIGURED`**, sans inventer de lien sécurisé. Les tests vérifient les droits et les claims JWT avec une configuration de test ; une session vidéo réelle nécessite le serveur configuré. La fermeture côté API bloque les nouveaux jetons ; la révocation d'un jeton déjà émis ou la déconnexion d'une session Jitsi déjà ouverte nécessitent une politique côté fournisseur.
-
-### Notifications durables
-
-Les changements de rendez-vous créent deux notifications en base, une pour chaque partie, dans la même transaction que l'historique. Une panne SMTP ne supprime pas le rendez-vous. Aucun motif médical, note privée ou lien vidéo n'est envoyé dans l'email ; son objet reste **FREE & TALK**.
-
-Lancer le worker dans un second terminal (ou comme service lors du déploiement) :
-
-```bash
-python -m app.cli.dispatch_notifications --watch
-```
-
-Pour un seul lot : `python -m app.cli.dispatch_notifications --limit 100`. Le worker utilise le transport SMTP/SSL ou la boîte fichier du projet, réessaie avec un délai croissant et marque `failed` après 5 tentatives. Les lignes sont verrouillées avec `SKIP LOCKED` sur MySQL/MariaDB et PostgreSQL pour permettre plusieurs workers. Un arrêt après l'envoi SMTP mais avant le commit peut provoquer un doublon lors de la reprise : la livraison est au moins une fois. Surveiller les lignes `failed` et relancer explicitement leur traitement après correction du transport. Le worker doit fonctionner pour que les emails en attente soient effectivement envoyés.
-
-## Test des flux
-
-```bash
-pytest -q
-```
-
-La suite couvre l'authentification, les profils, la validation des fichiers, les permissions, les décisions, les filtres publics et la conservation des comptes pendant une migration. Elle utilise SQLite par défaut. Pour rejouer les parcours sur MySQL/MariaDB, définir `TEST_DATABASE_URL` vers une base de test **dédiée et vide**, dont le nom commence par `free_and_talk_test_`. Les tables de cette base sont créées puis supprimées par les fixtures ; ne jamais y mettre de données à conserver. La base du `.env` n'est pas utilisée pour les comptes de test.
-
-1. `register` envoie un OTP de vérification email.
-2. `verify-email` confirme l'email.
-3. `login` retourne `challenge_id` (aucun JWT à cette étape).
-4. `verify-login-otp` retourne `access_token` et `refresh_token`.
-5. `GET /api/auth/me` requiert `Authorization: Bearer <access_token>`.
-6. `refresh` retourne de nouveaux tokens et révoque le précédent.
-7. `logout` révoque la session.
-8. `forgot-password` + `verify-reset-code` + `reset-password` permet de restaurer l'accès.
-
-## Architecture
-
-- `app/core` : configuration, SQLAlchemy, JWT et rate limiting.
-- `app/modules/auth/models` : modèles de données.
-- `app/modules/auth/schemas` : schémas de requêtes/réponses.
-- `app/modules/auth/services` : logique OTP, tokens, sessions, emailing.
-- `app/modules/auth/api` : routes et dépendances.
-- `alembic/versions` : migration initiale et insertion des rôles.
-- `tests` : tests de parcours principaux.
-- `app/modules/psychologists` : modèles, contrats, stockage privé et services des profils/vérifications ; les routes délèguent les règles métier aux services.
-- `app/cli/create_admin.py` : création contrôlée du premier administrateur.
-- `app/modules/appointments` : horaires, réservations, consultations, intégration Jitsi et outbox.
-- `app/cli/dispatch_notifications.py` : worker commun des notifications, rendez-vous et rappels.
-
-## Ce qui est couvert / reste à finaliser
-
-**Vérifications effectuées :** parcours des modules 1 à 3 sur SQLite et MariaDB 10.11, dont deux scénarios de réservation simultanée sur MariaDB dans une base temporaire, migrations, cohérence modèles/schéma, protection des documents et contrôles HTTP du serveur. La migration de la base applicative conserve les comptes existants. Les opérations de vérification verrouillent le profil avec `SELECT ... FOR UPDATE` sur MySQL/InnoDB et PostgreSQL ; les tests de parcours ne remplacent pas les essais de concurrence et de charge.
-
-**À faire avant mise en production :**
-- Configurer SMTP réel, Redis et HTTPS derrière un reverse proxy.
-- Étendre aux OTP l'outbox avec reprise après échec et surveiller les messages en échec.
-- Compléter les tests de parcours MySQL/MariaDB par des essais de concurrence OTP/refresh et décisions, d'échecs SMTP/Redis, et de montée en charge.
-- Définir et vérifier la politique de mots de passe compromis et les durées de rétention.
-- Ajouter des protections supplémentaires contre les abus distribués (le rate limiting fourni est un socle fixe par IP et clé, non une défense anti-abus exhaustive).
-- Vérifier les politiques de sécurité de déploiement, logs, gestion de secrets, CSP/cookies si utilisés et gouvernance des comptes admin.
-- En production, le serveur refusera les secrets faibles, l'absence de Redis/SMTP et l'utilisation de SQLite, mais cela **ne dispense pas** d'un audit de sécurité.
-
-**Note :** la vérification email et le reset acceptent ici email + OTP (conforme au programme). Le `challenge_id` protège spécifiquement le processus de connexion.
+Cette intégration est hors du périmètre opérationnel actuel
 
 ## Messagerie et notifications
-
-La migration additive `c91a7f02d31e` ajoute les conversations, messages, pièces jointes privées, notifications, préférences et journaux d'envoi. Appliquer `alembic upgrade head` après mise à jour du code; les migrations précédentes et les données existantes sont conservées.
 
 Les patients peuvent ouvrir une conversation avec un psychologue approuvé. Un psychologue peut répondre aux patients avec lesquels une conversation existe. Les administrateurs ne disposent pas d'un accès général au contenu des échanges. Les messages et pièces jointes sont visibles par les participants seulement; les pièces jointes acceptées sont PDF, JPEG et PNG, avec une limite définie par `MESSAGE_ATTACHMENT_MAX_BYTES`. Le contenu des messages n'est pas écrit dans les journaux d'application.
 
@@ -377,8 +273,6 @@ Le worker existant traite maintenant les deux files de notifications. Lancer `py
 
 ## Articles et ressources
 
-Les migrations additives jusqu'à `95be1a3715ca` ajoutent un catalogue d'articles, de ressources, d'avis et de fichiers privés. Appliquer `alembic upgrade head`; les tables et données précédentes sont conservées. Les articles et ressources restent en brouillon tant qu'un administrateur ne les publie pas. Les quatre articles mentionnés dans le programme ne contiennent pas de texte intégral dans les documents fournis. Après avoir appliqué les migrations et créé un administrateur, `python -m app.cli.seed_article_titles` ajoute leurs titres comme brouillons vides; il ne publie aucun texte inventé.
-
 Les routes publiques sont `GET /api/articles`, `GET /api/articles/{slug}`, `GET /api/resources` et `GET /api/resources/{resource_id}`. Les routes d'administration fournissent `POST`, `PUT` et `DELETE` sous `/api/admin/articles` et `/api/admin/resources`. Un administrateur peut ajouter un PDF, audio MP3/WAV/OGG/FLAC ou vidéo MP4/WebM via `POST /api/admin/resources/{id}/file`; la route publique `/api/resources/{id}/file` ne sert le fichier qu'après publication. Le stockage local privé est configuré par `PRIVATE_RESOURCE_DIRECTORY` avec la limite `RESOURCE_MAX_BYTES`.
 
 ## Avis, recherche et administration
@@ -392,6 +286,8 @@ Les administrateurs disposent aussi de `/api/admin/dashboard`, `/api/admin/users
 Les publications et décisions de modération sont consignées dans `admin_audit_logs`, sans recopier les textes des articles ou avis. L'historique est consultable à `GET /api/admin/audit-log`.
 
 ## Tarifs et paiements
+
+**Module différé :** les routes ci-dessous sont présentes, mais les paiements ne font pas partie du périmètre opérationnel actuel. Aucun encaissement réel n'est effectué. Le tarif stocké dans le profil ou le rendez-vous ne signifie pas qu'un paiement est disponible.
 
 Chaque psychologue peut renseigner `consultation_fee` (montant entier) et `consultation_currency` (code devise à trois lettres, `XAF` par défaut) avec `PUT /api/psychologists/me`. Le montant est copié dans le rendez-vous lors de la réservation et ne peut pas être remplacé par celui envoyé par le patient. La migration `6d2c90ab11f7` ajoute ce tarif et les tables de paiement.
 
